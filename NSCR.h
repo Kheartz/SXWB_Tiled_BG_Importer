@@ -16,7 +16,7 @@ struct MapInfo {
 		flipX = false;
 		flipY = false;
 	}
-	MapInfo(std::uint32_t tIdx, std::uint16_t pIdx) {
+	MapInfo(std::uint16_t pIdx, std::uint32_t tIdx) {
 		tileIdx = (std::uint32_t)tIdx;
 		paletteIdx = (std::int8_t)pIdx;
 		flipX = false;
@@ -54,7 +54,7 @@ private:
 public:
 	SCRNBlock(std::ifstream& iFILE);
 	virtual void writeData(std::ofstream& oFILE) final;
-	void setMapInfo(const std::vector<Tile>& tiles, const std::vector<std::uint16_t>& palIdx);
+	void setMapInfo(const std::vector<std::tuple<std::uint8_t, std::vector<std::uint8_t>>>& palIdx, const std::vector<std::uint16_t>& tileIdx);
 	
 };
 
@@ -66,6 +66,6 @@ public:
 	NSCR(const NSCR& base);
 	NSCR(std::string filename);
 
-	void setMapInfo(const std::vector<Tile>& tiles, const std::vector<std::uint16_t>& palIdx);
-
+	//void setMapInfo(const std::vector<Tile>& tiles, const std::vector<std::uint16_t>& palIdx);
+	void setMapInfo(const std::vector<std::tuple<std::uint8_t, std::vector<std::uint8_t>>>& palIdx, const std::vector<std::uint16_t>& tileIdx);
 };

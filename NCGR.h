@@ -6,12 +6,6 @@
 #include "Nitro.h"
 #include "NCLR.h"
 
-/*struct Pixel {
-	std::pair<int, int> colorIdx;
-	std::uint8_t alpha; //Needed?
-};*/
-
-
 struct Tile {
 	std::uint16_t width = 8;
 	std::uint16_t height = 8;
@@ -32,7 +26,7 @@ private:
 
 	std::unique_ptr<std::byte[]> data;
 
-	std::vector<std::uint8_t> pixelPaletteIdx;
+	std::vector<std::tuple<std::uint8_t, std::vector<std::uint8_t>>> pixelPaletteIdx;
 
 public:
 	CHARBlock(std::ifstream& iFILE);
@@ -42,10 +36,10 @@ public:
 
 	std::byte* getImageData() { return data.get(); }
 	void replaceImageData(std::unique_ptr<std::byte[]>& newData);
-	//void setHeight(std::uint16_t h) { height = h; }
-	//void setWidth(std::uint16_t w) { width = w; }
 
-	void setPixelPaletteIdx(std::vector<std::uint8_t>& p, std::uint16_t w, std::uint16_t h); //{ tileOrder = 1; pixelPaletteIdx = std::move(p); };
+	void setPixelPaletteIdx(std::vector<std::tuple<std::uint8_t, std::vector<std::uint8_t>>>& p, std::uint16_t w, std::uint16_t h);
+
+	const std::vector<std::tuple<std::uint8_t, std::vector<std::uint8_t>>>& getPixelPaletteIdx() { return pixelPaletteIdx; }
 };
 
 class CPOSBlock : public Block {
@@ -53,30 +47,28 @@ private:
 
 public:
 
-	virtual std::unique_ptr<Block> clone() {
-		return std::make_unique<Block>(*this);
-	}
 	virtual void read(std::ifstream& iFILE) final {};
 	virtual void writeData(std::ofstream& oFILE) final {};
 };
 
 class NCGR : public Nitro{
 private:
-	//std::vector<std::vector<Pixel>> pixels;
+
 	CHARBlock* charBlock;
 	int getIndex(int x, int y, int width, int height);
 	std::uint8_t getClosestColor(const Color& col, std::vector<Color>& palette);
+	std::uint8_t getClosestColor(const Color& col, std::vector<std::vector<Color>>& palette);
+	std::tuple<std::uint8_t, std::vector<std::uint8_t>> getClosestColorTile(Tile&, std::vector<Color>& palette);
 	std::vector<Tile> tiles;
 public:
 	NCGR(const NCGR& base);
 	NCGR(std::string filename);
-	
-	void relinearizeData(std::vector<Color>& pixels);
+
 	CHARBlock* getCharBlock() { return charBlock; }
 
-	//void setImgData(std::vector<Color>& allColors, std::vector<Color>& pal, std::uint16_t width, std::uint16_t h);
-	void setImgData2(std::vector<Tile>& tiles, std::vector<Color>& pal, std::uint16_t w, std::uint16_t h);
+	void setImgData(std::vector<Tile>& tiles, std::vector<Color>& pal, std::uint16_t w, std::uint16_t h);
 
 	std::tuple<std::vector<Tile>&, std::vector<std::uint16_t>> getTiles(std::vector<Color>& allColors);
-	
+
+	const std::vector<std::tuple<std::uint8_t, std::vector<std::uint8_t>>>& getPixelPalIdx() { return charBlock->getPixelPaletteIdx(); }
 };

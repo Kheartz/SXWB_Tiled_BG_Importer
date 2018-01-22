@@ -23,22 +23,9 @@ struct Color {
 
 
 enum ColorFormat {
-	Unknown,
-	// Texture NDS formats from http://nocash.emubase.de/gbatek.htm#ds3dtextureformats
-	Indexed_A3I5 = 1,	// 8  bits-> 0-4: index; 5-7: alpha
-	Indexed_2bpp = 2,	// 2  bits for 4   colors
 	Indexed_4bpp = 3,	// 4  bits for 16  colors
 	Indexed_8bpp = 4,	// 8  bits for 256 colors          
-	Texeled_4x4 = 5,	// 32 bits-> 2 bits per texel (only in textures)
-	Indexed_A5I3 = 6,	// 8  bits-> 0-2: index; 3-7: alpha
-	ABGR555_16bpp = 7,	// 16 bits BGR555 color with alpha component
-	// Also common formats
-	Indexed_1bpp,		// 1  bit  for 2   colors
-	Indexed_A4I4,  		// 8  bits-> 0-3: index; 4-7: alpha
-	BGRA_32bpp, 		// 32 bits BGRA color
-	ABGR_32bpp, 		// 32 bits ABGR color
 };
-
 
 class PLTTBlock : public Block {
 private:
@@ -48,13 +35,7 @@ private:
 	std::uint32_t paletteOffset;
 	std::unique_ptr<uint16_t[]> paletteData; //BGR555 format transformed from the Palette data
 	std::uint32_t paletteSize; //In Bytes = Colors * 2
-	/*std::vector<Color> colors;
-
-	std::vector<Color> byteArrayToColorVec(std::unique_ptr<std::byte[]>& bytes);
-	Color uShortToColor(std::uint16_t value);
 	
-	std::unique_ptr<std::byte[]> colorsToBytes();
-	std::uint16_t colorToUInt16(Color& color);*/
 	std::uint16_t getBGR555(Color& c);
 	
 public:

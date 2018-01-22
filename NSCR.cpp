@@ -46,13 +46,20 @@ void SCRNBlock::writeData(std::ofstream& oFILE) {
 
 }
 
-void SCRNBlock::setMapInfo(const std::vector<Tile>& tiles, const std::vector<std::uint16_t>& palIdx) {
+void SCRNBlock::setMapInfo(const std::vector<std::tuple<std::uint8_t, std::vector<std::uint8_t>>>& palIdx, const std::vector<std::uint16_t>& tileIdx) {
 	infos.clear();
 
 	//We start with the second palidx since we manually set the first one to be a transparent tile.
-	for (std::uint32_t i = 1; i < palIdx.size(); i++) {
-		//infos.emplace_back(i, palIdx[0]);
-		infos.emplace_back(palIdx[i], 0);
+
+	int pId = 0;
+	for (std::uint32_t i = 1; i < tileIdx.size(); i++) {
+		if (tileIdx[i] == 0) {
+			infos.emplace_back(0, tileIdx[i]);
+		}
+		else {
+			infos.emplace_back(std::get<0>(palIdx[pId++]), tileIdx[i]);
+		}
+		
 	}
 }
 
@@ -71,6 +78,6 @@ NSCR::NSCR(const NSCR& base) : Nitro(base) {
 	}
 }
 
-void NSCR::setMapInfo(const std::vector<Tile>& tiles, const std::vector<std::uint16_t>& palIdx) {
-	scrnBlock->setMapInfo(tiles, palIdx);
+void NSCR::setMapInfo(const std::vector<std::tuple<std::uint8_t, std::vector<std::uint8_t>>>& palIdx, const std::vector<std::uint16_t>& tileIdx) {
+	scrnBlock->setMapInfo(palIdx, tileIdx);
 }

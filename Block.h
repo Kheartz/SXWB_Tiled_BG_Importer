@@ -17,7 +17,4 @@ public:
 	//void readPreHeader(std::ifstream& iFILE);
 	void write(std::ofstream& oFILE);
 	virtual void writeData(std::ofstream& oFILE) {};
-
-	//virtual void read(std::ifstream& iFILE) = 0;
-	//virtual void write(std::ofstream& oFILE) = 0;
 };

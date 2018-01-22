@@ -15,7 +15,7 @@ private:
 	unsigned int depth;
 	std::unique_ptr<CImg<unsigned char>> img;
 public:
-	Image(std::string filename);
+	Image(std::string& filename);
 	unsigned int getWidth() const { return width; }
 	unsigned int getHeight() const { return height; }
 	unsigned char* getData() { return img->data(); }

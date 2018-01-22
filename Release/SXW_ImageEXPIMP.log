@@ -1,0 +1,12 @@
+﻿  Block.cpp
+  Image.cpp
+  Importer.cpp
+  main.cpp
+  NCGR.cpp
+  NCLR.cpp
+  Nitro.cpp
+  NSCR.cpp
+  Generating code
+  All 1964 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  Finished generating code
+  SXW_ImageEXPIMP.vcxproj -> C:\Users\Khear_000\Documents\Visual Studio 2017\Projects\SXW_ImageEXPIMP\Release\SXW_ImageEXPIMP.exe

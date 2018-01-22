@@ -45,24 +45,18 @@ void CHARBlock::writeData(std::ofstream& oFILE) {
 	oFILE.write((char*)(&dataSize), sizeof(dataSize)); //0x18
 	oFILE.write((char*)(&dataOffset), sizeof(dataOffset)); //0x1c
 
-
-	//data = std::make_unique<std::byte[]>(dataSize);
-	//oFILE.write((char*)data.get(), dataSize);
-
 	//Assuming 4bpp for now
-	int numGP = 0;
-	for (unsigned int i = 0; i < pixelPaletteIdx.size(); i+=2) {
-		std::byte b = ((std::byte)pixelPaletteIdx[i] << 4) | ((std::byte)pixelPaletteIdx[i+1]);
-
-		if ((b != (std::byte)0x00)) {
-			//cout << bitset<8>(pixelPaletteIdx[i]) << "\n" << bitset<8>(pixelPaletteIdx[i + 1]) << "\n" << bitset<8>((std::uint8_t)b);
-			
+	for (unsigned int i = 0; i < pixelPaletteIdx.size(); i++) {
+		std::vector<std::uint8_t>& pixelIndices = std::get<1>(pixelPaletteIdx[i]);
+		for (unsigned int p = 0; p < pixelIndices.size(); p+=2) {
+			std::uint8_t& palIdx1 = pixelIndices[p];
+			std::uint8_t& palIdx2 = pixelIndices[p + 1];
+			//std::uint8_t b = (palIdx1 << 4) | palIdx2;
+			std::uint8_t b = (palIdx2 << 4) | palIdx1;
+			oFILE.write((char*)(&b), sizeof(std::uint8_t));
 		}
-		//b = std::byte(0x11);
-		oFILE.write((char*)(&b), sizeof(std::byte));
-		numGP++;
 	}
-	dataSize = (std::uint32_t)(pixelPaletteIdx.size() / 2);
+	dataSize = (std::uint32_t)(pixelPaletteIdx.size() * 64 / 2);
 
 	std::streampos currPos = oFILE.tellp();
 	oFILE.seekp(dataPos);
@@ -92,82 +86,31 @@ NCGR::NCGR(std::string filename) : Nitro(filename) {
 	
 }
 
-void CHARBlock::setPixelPaletteIdx(std::vector<std::uint8_t>& p, std::uint16_t w, std::uint16_t h){
+void CHARBlock::setPixelPaletteIdx(std::vector<std::tuple<std::uint8_t, std::vector<std::uint8_t>>>& p, std::uint16_t w, std::uint16_t h){
 	tileOrder = 0; 
-	width = w;
-	height = h;
+	width = w; //fix at 256
+	//height = h; //change the height until %
+	while (p.size() % 32 != 0) {
+		p.emplace_back(p[0]);
+	}
+	height = (std::uint8_t)(p.size() / width);
+
+
+
 	pixelPaletteIdx = std::move(p); 
 
 };
 
 NCGR::NCGR(const NCGR& base) : Nitro(base) {
 
-	//for (auto& block : base.blocks) {
-	//	blocks.emplace_back(block);
-//	}
 	if (base.blocks.size() > 0 && base.blocks[0] != nullptr) {
 		std::unique_ptr<CHARBlock> newCHARBlock = std::make_unique<CHARBlock>(*(dynamic_cast<CHARBlock*>(base.blocks[0].get())));
 		blocks.emplace_back(std::move(newCHARBlock));
 		charBlock = dynamic_cast<CHARBlock*>(blocks[0].get());
 	}
-	/*writeHeader(filename);
-	for (auto& block : blocks) {
-		block->write(oFILE);
-	}
-	std::streampos finalPos = oFILE.tellp();
-	oFILE.seekp(0x8);
-	std::uint32_t finalPosInt = static_cast<std::uint32_t>(finalPos);
-	oFILE.write((char*)(&finalPosInt), sizeof(std::uint32_t));
-	oFILE.close();*/
+
 }
 
-void NCGR::relinearizeData(std::vector<Color>& pixels) {
-	auto[width, height] = charBlock->getWidthAndHeight();
-	int length = width * height;
-	std::unique_ptr<std::uint32_t[]> original = std::make_unique<std::uint32_t[]>(length);
-	for (unsigned int i = 0; i < pixels.size(); i++) {
-		std::uint32_t redComponent = pixels[i].red;
-		std::uint32_t greenComponent = pixels[i].green;
-		std::uint32_t blueComponent = pixels[i].blue;
-		std::uint32_t alphaComponent = pixels[i].alpha;
-
-		original[i] = (alphaComponent << 24) | (blueComponent << 16) | (greenComponent << 8) | (redComponent << 0);
-	}
-
-	std::unique_ptr<std::uint32_t[]> relinearized = std::make_unique<std::uint32_t[]>(width * height);
-
-	for (int l = 0; l < length; l++) {
-		int idx = getIndex(l % width, l / width, width, height);
-		relinearized[l] = original[idx];
-	}
-	std::ofstream yo;
-	yo.open("data/wtf.txt", std::ofstream::binary);
-	yo.write((char*)relinearized.get(), width*height);
-	yo.close();
-
-	int bpp = 4;
-	
-	std::unique_ptr<std::byte[]> relinearizedBytes = std::make_unique<std::byte[]>(length * bpp / 8); //4 is bpp (fow now)
-	int bufferPos = 0;
-
-	for (int i = 0; i < length; i++) {
-		std::uint32_t info = original[i] & 0x00FFFFFF;
-		for (int s = 0; s < bpp; s++, bufferPos++) {
-			std::uint32_t bit = (info >> s) & 1;
-			if (bit != 0) {
-				int f = 1;
-			}
-
-			std::uint32_t dByte = (std::uint32_t)relinearizedBytes[bufferPos / 8];
-			dByte |= bit << (bufferPos % 8);
-			relinearizedBytes[bufferPos / 8] = (std::byte)dByte;
-		}
-		//buffer.SetBits(ref bufferPos, this.Format.Bpp(), info);
-	}
-
-	charBlock->replaceImageData(relinearizedBytes);
-	
-}
 int NCGR::getIndex(int x, int y, int width, int height) {
 	int index = 0;
 	int tileLength = 8 * 8;
@@ -186,6 +129,7 @@ int NCGR::getIndex(int x, int y, int width, int height) {
 std::uint8_t NCGR::getClosestColor(const Color& col, std::vector<Color>& palette) {
 
 	std::uint32_t lowestVal = 196000;
+	//std::uint8_t lowestPal = 0;
 	std::uint8_t lowestIdx = 0 ;
 	for (unsigned int i = 0; i < palette.size(); i++) {
 			std::uint8_t dR = palette[i].red - col.red;
@@ -194,33 +138,50 @@ std::uint8_t NCGR::getClosestColor(const Color& col, std::vector<Color>& palette
 			//float dA = palette[i][j].alpha - col.alpha;
 			std::uint32_t dist = dR*dR + dB*dB + dG*dG; //SqRt doesn't need to be calculated
 			if (dist < lowestVal) {
+			//	lowestPal = i / 16;
 				lowestIdx = i;
 				lowestVal = dist;
 			}
 	}
+	//manually set lowestPal to 0 for now
 	return lowestIdx;
 }
 
-/*void NCGR::setImgData(std::vector<Color>& allColors, std::vector<Color>& pal, std::uint16_t w, std::uint16_t h) {
-	std::vector<std::uint8_t> palIdx;
-	std::vector<int>(pal.size());
-	for (auto& c : allColors) {
-		palIdx.emplace_back(getClosestColor(c, pal));
-	}
-	charBlock->setPixelPaletteIdx(palIdx, w, h);
-}*/
-void NCGR::setImgData2(std::vector<Tile>& tiles, std::vector<Color>& pal, std::uint16_t w, std::uint16_t h) {
-	std::vector<std::uint8_t> palIdx;
-	std::vector<int>(pal.size());
-	for (auto& t : tiles) {
-		//for (auto p : t.pixels) {
-		for (unsigned int i = 0; i < 8; i++) {
-			for (unsigned int j = 0; j < 8; j++) {
-				auto& p = t.pixels[i * 8 + j];
-				palIdx.emplace_back(getClosestColor(*p, pal));
+std::tuple<std::uint8_t, std::vector<std::uint8_t>> NCGR::getClosestColorTile(Tile& t, std::vector<Color>& palette) {
+	
+	std::uint8_t numPalettes = (std::uint8_t)(palette.size() / 16);
+	std::vector<std::uint8_t> matches(numPalettes);
+	std::vector<std::vector<std::uint8_t>> indices(numPalettes, std::vector<std::uint8_t>(t.pixels.size(), 0));
+	for (unsigned int p = 0; p < t.pixels.size(); p++){
+		Color& pix = *t.pixels[p];
+		for (unsigned int i = 0; i < palette.size(); i++) {
+			if (pix == palette[i]) {
+				matches[i / 16]++;
+				indices[i / 16][p] = i % 16;
+				break;
 			}
-			
 		}
+	}
+	//Find best matches
+	int bestMatchPal = -1;
+	int bestMatchVal = -1;
+	for (unsigned int i = 0; i < matches.size(); i++) {
+		if (matches[i] > bestMatchVal) {
+			bestMatchVal = matches[i];
+			bestMatchPal = i;
+		}
+	}
+
+	//manually set lowestPal to 0 for now
+	return std::forward_as_tuple(bestMatchPal, indices[bestMatchPal]);
+}
+
+void NCGR::setImgData(std::vector<Tile>& tiles, std::vector<Color>& pal, std::uint16_t w, std::uint16_t h) {
+	std::vector<std::tuple<std::uint8_t,  std::vector<std::uint8_t>>> palIdx;
+	//std::vector<int>(pal.size());
+	for (unsigned int t = 0; t < tiles.size(); t++) {
+		Tile& tile = tiles[t];
+		palIdx.emplace_back(getClosestColorTile(tile, pal));
 	}
 	charBlock->setPixelPaletteIdx(palIdx, w, h);
 }
@@ -229,8 +190,9 @@ std::tuple<std::vector<Tile>&, std::vector<std::uint16_t>> NCGR::getTiles(std::v
 	int tWidth = 8;
 	int tHeight = 8;
 
-	std::vector<std::uint16_t> tileIdx;
 
+	//Set Default Transparent Tile
+	std::vector<std::uint16_t> tileIdx;
 	Tile defaultTile;
 	for (unsigned u = 0; u < defaultTile.height; u++) {
 		for (unsigned v = 0; v < defaultTile.width; v++) {
@@ -266,7 +228,6 @@ std::tuple<std::vector<Tile>&, std::vector<std::uint16_t>> NCGR::getTiles(std::v
 			else {
 				tileIdx.push_back(0);
 			}
-			
 		}
 	}
 	return std::forward_as_tuple(tiles, std::move(tileIdx));
